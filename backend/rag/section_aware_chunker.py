@@ -1,5 +1,5 @@
 import re
-from typing import Dict, List
+from typing import Dict, List, Any, Union
 from backend.rag.models import ChunkMetadata, ChunkedSection
 
 
@@ -20,7 +20,7 @@ SECTION_PATTERNS = {
 }
 
 
-def detect_sections(text: str) -> Dict:
+def detect_sections(text: str) -> Dict[str, Dict[str, Union[int, str]]]:
     """
     Detect sections in text and return their boundaries and content.
 
@@ -102,6 +102,10 @@ def chunk_section_text(section_text: str, chunk_size: int = 600, overlap: int = 
     Returns:
         List of chunk strings
     """
+    # Validate parameters to prevent infinite loop
+    if overlap >= chunk_size:
+        raise ValueError(f"overlap ({overlap}) must be less than chunk_size ({chunk_size})")
+
     # Split into words
     words = section_text.split()
 

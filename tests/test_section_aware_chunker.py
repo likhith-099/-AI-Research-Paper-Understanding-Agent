@@ -65,4 +65,10 @@ def test_chunk_section_text_preserves_content():
     section_text = "The quick brown fox jumps over the lazy dog. " * 100
     chunks = chunk_section_text(section_text, chunk_size=600, overlap=100)
     reconstructed = " ".join(chunks)
-    assert section_text.strip() in reconstructed or len(chunks) > 0
+
+    # Verify all words are present (accounting for overlaps)
+    original_words = section_text.split()
+    reconstructed_words = reconstructed.split()
+    assert len(original_words) <= len(reconstructed_words)  # Some words repeated due to overlap
+    assert original_words[0] == reconstructed_words[0]  # First word matches
+    assert original_words[-1] == reconstructed_words[-1]  # Last word matches
