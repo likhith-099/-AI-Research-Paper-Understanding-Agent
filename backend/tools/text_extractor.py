@@ -1,4 +1,5 @@
 import fitz  # PyMuPDF
+import re
 
 
 def extract_text_from_pdf(pdf_path):
@@ -20,7 +21,7 @@ def extract_text_from_pdf(pdf_path):
 
     combined_text = "\n".join(full_text)
 
-    # Basic cleaning
-    cleaned_text = " ".join(combined_text.split())
+    # Preserve paragraph and section breaks so downstream section detection works.
+    cleaned_text = re.sub(r"[ \t]+", " ", combined_text)
 
-    return cleaned_text
+    return cleaned_text.strip()

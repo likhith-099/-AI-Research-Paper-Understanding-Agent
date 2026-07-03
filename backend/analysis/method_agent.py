@@ -1,26 +1,51 @@
-from analysis.llm_client import generate_with_claude
+from analysis.section_service import generate_evidence_based_section
 
 
 def generate_method_explanation(retriever):
-    context = retriever.retrieve_context(
-        "method architecture model framework training pipeline approach algorithm",
-        top_k=4
+    return generate_evidence_based_section(
+        retriever,
+        section_name="method",
+        query_text="""
+        methodology
+        method
+        approach
+        architecture
+        model design
+        training procedure
+        training pipeline
+        optimization
+        encoder
+        backbone
+        feature extraction
+        representation learning
+        pretraining
+        contrastive learning
+        self-supervised learning
+        MoCo
+        SimCLR
+        SwAV
+        Barlow Twins
+        SimSiam
+        ViT
+        ViT-B/16
+        MAE
+        LoRA
+        QLoRA
+        Swin-T
+        """,
+        max_tokens=750,
+        prompt="""
+Explain the methodology used in the paper.
+
+Instructions:
+- Explain the core method in simple technical language.
+- Describe the architecture, framework, or algorithm.
+- Explain how the system works step-by-step.
+- Mention training strategy if available.
+- Mention important components, encoders, backbones, modules, or pipelines.
+- Do not invent information.
+- If some details are missing, only explain what is present.
+- Write 1 concise paragraph of 5-8 sentences.
+- Avoid bullet points.
+""".strip(),
     )
-
-    prompt = f"""
-You are an AI research assistant.
-
-Using the context below, explain the method used in the research paper.
-
-Requirements:
-- Write 5 to 6 lines
-- Explain the model architecture or algorithm
-- Describe how the system works step by step
-- Avoid bullet points
-
-Context:
-{context}
-"""
-
-    return generate_with_claude(prompt, max_tokens=220)
-

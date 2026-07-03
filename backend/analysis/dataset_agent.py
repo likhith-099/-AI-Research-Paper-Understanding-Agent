@@ -1,16 +1,14 @@
-from analysis.llm_client import generate_with_claude
+from analysis.section_service import generate_evidence_based_section
 
 
 def generate_dataset_explanation(retriever):
-    context = retriever.retrieve_context(
-        "dataset experiments benchmark training data evaluation dataset",
-        top_k=4
-    )
-
-    prompt = f"""
-You are an AI research assistant.
-
-Using the context below, explain the datasets used in the research paper.
+    return generate_evidence_based_section(
+        retriever,
+        section_name="dataset",
+        query_text="dataset experiments benchmark training data evaluation dataset",
+        max_tokens=500,
+        prompt="""
+Explain the datasets used in the research paper.
 
 Requirements:
 - Write 5 to 6 lines
@@ -18,10 +16,6 @@ Requirements:
 - Mention benchmarks or data sources
 - Explain why the dataset is important for the experiments
 - Avoid bullet points
-
-Context:
-{context}
-"""
-
-    return generate_with_claude(prompt, max_tokens=220)
+""".strip(),
+    )
 

@@ -1,93 +1,12 @@
-import re
-from typing import Dict, List, Any, Union
-from backend.rag.models import ChunkMetadata, ChunkedSection
+from typing import Dict, List
+
+from rag.models import ChunkMetadata, ChunkedSection
+from tools.section_detector import detect_sections_verbose
 
 
-# Regex patterns to detect research paper sections
-SECTION_PATTERNS = {
-    "abstract": r"^\s*abstract\s*$",
-    "introduction": r"^\s*(introduction|intro)\s*$",
-    "related_work": r"^\s*(related\s+work|related\s+works|background)\s*$",
-    "background": r"^\s*background\s*$",
-    "methodology": r"^\s*(methodology|method|methods|approach)\s*$",
-    "experimental_setup": r"^\s*(experimental\s+setup|experiment\s+setup|setup)\s*$",
-    "experiments": r"^\s*experiments?\s*$",
-    "results": r"^\s*results?\s*$",
-    "discussion": r"^\s*discussion\s*$",
-    "limitations": r"^\s*limitations?\s*$",
-    "future_work": r"^\s*(future\s+work|future\s+works|future\s+directions?)\s*$",
-    "conclusion": r"^\s*(conclusion|conclusions?)\s*$",
-}
-
-
-def detect_sections(text: str) -> Dict[str, Dict[str, Union[int, str]]]:
-    """
-    Detect sections in text and return their boundaries and content.
-
-    Args:
-        text: Full document text
-
-    Returns:
-        Dictionary with section names as keys and section info (start, end, content, order)
-    """
-    lines = text.split('\n')
-    sections = {}
-    section_order = 0
-    section_starts = []
-
-    # Find all section headers
-    for i, line in enumerate(lines):
-        stripped_line = line.strip()
-        if not stripped_line:
-            continue
-
-        # Check if this line matches any section pattern
-        for section_name, pattern in SECTION_PATTERNS.items():
-            if re.match(pattern, stripped_line, re.IGNORECASE):
-                section_starts.append((i, section_name, section_order))
-                section_order += 1
-                break
-
-    # If no sections found, return entire text as "full_text"
-    if not section_starts:
-        return {
-            "full_text": {
-                "start": 0,
-                "end": len(text),
-                "content": text,
-                "order": 0
-            }
-        }
-
-    # Extract section boundaries and content
-    for idx, (line_idx, section_name, order) in enumerate(section_starts):
-        # Calculate start position (character position at start of section header)
-        start_pos = sum(len(lines[i]) + 1 for i in range(line_idx))
-
-        # Calculate end position (character position at start of next section or end of text)
-        if idx + 1 < len(section_starts):
-            next_line_idx = section_starts[idx + 1][0]
-            end_pos = sum(len(lines[i]) + 1 for i in range(next_line_idx))
-        else:
-            end_pos = len(text)
-
-        # Extract content (everything after the header until next section)
-        if idx + 1 < len(section_starts):
-            next_line_idx = section_starts[idx + 1][0]
-            content_lines = lines[line_idx + 1:next_line_idx]
-        else:
-            content_lines = lines[line_idx + 1:]
-
-        content = '\n'.join(content_lines).strip()
-
-        sections[section_name] = {
-            "start": start_pos,
-            "end": end_pos,
-            "content": content,
-            "order": order
-        }
-
-    return sections
+def detect_sections(text: str) -> Dict[str, Dict[str, object]]:
+    verbose = detect_sections_verbose(text)
+    return verbose["sections"]
 
 
 def chunk_section_text(section_text: str, chunk_size: int = 600, overlap: int = 100) -> List[str]:
@@ -153,6 +72,7 @@ def create_section_aware_chunks(text: str, chunk_size: int = 600, overlap: int =
     for section_name, section_info in sorted_sections:
         section_content = section_info["content"]
         section_index = section_info["order"]
+        canonical_section = section_info.get("canonical_section", section_name)
 
         # Chunk this section
         chunks = chunk_section_text(section_content, chunk_size=chunk_size, overlap=overlap)
@@ -162,7 +82,7 @@ def create_section_aware_chunks(text: str, chunk_size: int = 600, overlap: int =
         for chunk_idx, chunk_text in enumerate(chunks):
             metadata = ChunkMetadata(
                 text=chunk_text,
-                section=section_name,
+                section=canonical_section,
                 section_index=section_index,
                 chunk_index=chunk_idx
             )

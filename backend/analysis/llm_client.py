@@ -1,5 +1,6 @@
 import os
 import re
+import logging
 import time
 
 import requests
@@ -12,10 +13,13 @@ API_KEY_ERROR_MESSAGE = (
 
 GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
-GROQ_MAX_TOKENS = int(os.getenv("GROQ_MAX_TOKENS", "400"))
+GROQ_MAX_TOKENS = int(os.getenv("GROQ_MAX_TOKENS", "800"))
 GROQ_MAX_PROMPT_CHARS = int(os.getenv("GROQ_MAX_PROMPT_CHARS", "12000"))
 GROQ_RETRIES = int(os.getenv("GROQ_RETRIES", "2"))
 GROQ_RETRY_FALLBACK_SECONDS = float(os.getenv("GROQ_RETRY_FALLBACK_SECONDS", "8"))
+GROQ_EMPTY_RESPONSE_RETRIES = int(os.getenv("GROQ_EMPTY_RESPONSE_RETRIES", "3"))
+
+logger = logging.getLogger(__name__)
 
 
 def _resolve_api_key():
@@ -45,7 +49,11 @@ def _extract_retry_seconds(error_text: str) -> float:
     return GROQ_RETRY_FALLBACK_SECONDS
 
 
-def generate_with_claude(prompt, max_tokens=None):
+def _estimate_tokens(text: str) -> int:
+    return max(1, len(text.split()))
+
+
+def generate_with_groq(prompt, max_tokens=None, return_metadata=False):
     api_key = _resolve_api_key()
     if not api_key:
         raise ValueError(API_KEY_ERROR_MESSAGE)
@@ -62,46 +70,76 @@ def generate_with_claude(prompt, max_tokens=None):
         "max_tokens": max_tokens or GROQ_MAX_TOKENS,
     }
 
-    attempts = GROQ_RETRIES + 1
     response = None
-    for attempt in range(attempts):
-        try:
-            response = requests.post(
-                f"{GROQ_BASE_URL.rstrip('/')}/chat/completions",
-                headers=_build_headers(api_key),
-                json=payload,
-                timeout=120,
-            )
-        except requests.RequestException as exc:
-            if attempt == attempts - 1:
-                raise RuntimeError(f"Groq API request failed: {exc}") from exc
-            time.sleep(GROQ_RETRY_FALLBACK_SECONDS)
-            continue
+    last_metadata = {}
 
-        if response.status_code == 429 and attempt < attempts - 1:
-            wait_seconds = _extract_retry_seconds(response.text)
-            time.sleep(wait_seconds)
-            continue
-        break
+    for empty_attempt in range(GROQ_EMPTY_RESPONSE_RETRIES):
+        attempts = GROQ_RETRIES + 1
+        for attempt in range(attempts):
+            try:
+                started_at = time.perf_counter()
+                response = requests.post(
+                    f"{GROQ_BASE_URL.rstrip('/')}/chat/completions",
+                    headers=_build_headers(api_key),
+                    json=payload,
+                    timeout=120,
+                )
+            except requests.RequestException as exc:
+                if attempt == attempts - 1:
+                    raise RuntimeError(f"Groq API request failed: {exc}") from exc
+                time.sleep(GROQ_RETRY_FALLBACK_SECONDS)
+                continue
 
-    if response.status_code >= 400:
-        detail = response.text
-        if "credit" in detail.lower() or "insufficient" in detail.lower() or "quota" in detail.lower():
-            raise RuntimeError("Groq API credits/quota are insufficient. Please check your Groq billing.")
-        if response.status_code == 429:
-            raise RuntimeError(
-                "Groq rate limit exceeded. Please retry shortly or reduce request size."
-            )
-        raise RuntimeError(f"Groq API request failed ({response.status_code}): {detail}")
+            if response.status_code == 429 and attempt < attempts - 1:
+                wait_seconds = _extract_retry_seconds(response.text)
+                time.sleep(wait_seconds)
+                continue
 
-    data = response.json()
-    choices = data.get("choices") or []
-    if not choices:
-        raise RuntimeError("Groq API returned no choices.")
+            latency = time.perf_counter() - started_at
+            break
 
-    message = choices[0].get("message") or {}
-    content = message.get("content", "")
-    if not content:
-        raise RuntimeError("Groq API returned an empty response.")
+        if response.status_code >= 400:
+            detail = response.text
+            if "credit" in detail.lower() or "insufficient" in detail.lower() or "quota" in detail.lower():
+                raise RuntimeError("Groq API credits/quota are insufficient. Please check your Groq billing.")
+            if response.status_code == 429:
+                raise RuntimeError(
+                    "Groq rate limit exceeded. Please retry shortly or reduce request size."
+                )
+            raise RuntimeError(f"Groq API request failed ({response.status_code}): {detail}")
 
-    return content.strip()
+        data = response.json()
+        choices = data.get("choices") or []
+        if not choices:
+            raise RuntimeError("Groq API returned no choices.")
+
+        message = choices[0].get("message") or {}
+        content = message.get("content", "")
+        cleaned_content = content.strip()
+        usage = data.get("usage") or {}
+        last_metadata = {
+            "response_length": len(cleaned_content),
+            "token_count": usage.get("total_tokens") or _estimate_tokens(cleaned_content),
+            "latency_seconds": latency,
+        }
+
+        logger.info(
+            "Groq response meta model=%s length=%s tokens=%s latency=%.3fs",
+            GROQ_MODEL,
+            last_metadata["response_length"],
+            last_metadata["token_count"],
+            last_metadata["latency_seconds"],
+        )
+
+        if cleaned_content:
+            return (cleaned_content, last_metadata) if return_metadata else cleaned_content
+
+        logger.warning(
+            "Groq returned empty content attempt=%s/%s",
+            empty_attempt + 1,
+            GROQ_EMPTY_RESPONSE_RETRIES,
+        )
+        time.sleep(GROQ_RETRY_FALLBACK_SECONDS)
+
+    failure = {"error": "Generation failed"}
+    return (failure, last_metadata) if return_metadata else failure

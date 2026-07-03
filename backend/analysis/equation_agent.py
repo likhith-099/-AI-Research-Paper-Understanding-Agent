@@ -1,28 +1,26 @@
-import re
-from analysis.llm_client import generate_with_claude
-
-
-def extract_equations(context):
-    """
-    Detect possible equations or formula patterns
-    """
-    equation_pattern = r"([A-Za-z0-9]+\s*=\s*[^.]+)"
-    matches = re.findall(equation_pattern, context)
-    return matches[:3]
+from analysis.section_service import generate_evidence_based_section
 
 
 def generate_equation_explanation(retriever):
-    context = retriever.retrieve_context(
-        "loss function equation formula objective optimization model training",
-        top_k=4
-    )
+    equations = getattr(retriever, "paper_equations", [])[:8]
 
-    equations = extract_equations(context)
+    if not equations:
+        return {
+            "answer": "No explicit mathematical equations found in paper.",
+            "evidence_chunks": [],
+            "source_sections": [],
+            "status": "insufficient_evidence",
+            "retrieval_debug": None,
+            "generation_debug": None,
+        }
 
-    prompt = f"""
-You are an AI research assistant.
-
-Below are equations extracted from a research paper along with surrounding context.
+    return generate_evidence_based_section(
+        retriever,
+        section_name="equations",
+        query_text="loss function equation formula objective optimization model training",
+        max_tokens=450,
+        prompt=f"""
+Below are equations extracted from a research paper.
 
 Explain the most important equation in simple language.
 
@@ -34,10 +32,6 @@ Requirements:
 
 Equations:
 {equations}
-
-Context:
-{context}
-"""
-
-    return generate_with_claude(prompt, max_tokens=220)
+""".strip(),
+    )
 

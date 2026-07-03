@@ -1,16 +1,14 @@
-from analysis.llm_client import generate_with_claude
+from analysis.section_service import generate_evidence_based_section
 
 
 def generate_implementation_ideas(retriever):
-    context = retriever.retrieve_context(
-        "training pipeline implementation framework model training hyperparameters experiment setup",
-        top_k=4
-    )
-
-    prompt = f"""
-You are an AI research assistant.
-
-Using the context below, explain how someone could implement or reproduce the research paper.
+    return generate_evidence_based_section(
+        retriever,
+        section_name="implementation",
+        query_text="training pipeline implementation framework model training hyperparameters experiment setup",
+        max_tokens=550,
+        prompt="""
+Explain how someone could implement or reproduce the research paper.
 
 Requirements:
 - Write 5 to 6 lines
@@ -18,10 +16,6 @@ Requirements:
 - Mention models, datasets, or training methods
 - Keep explanation practical and clear
 - Avoid bullet points
-
-Context:
-{context}
-"""
-
-    return generate_with_claude(prompt, max_tokens=220)
+""".strip(),
+    )
 

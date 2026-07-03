@@ -6,6 +6,27 @@ The backend supports:
 - arXiv URL analysis
 - direct PDF upload analysis
 
+## Architecture
+
+The project is organized as a layered pipeline:
+
+1. **API layer** - `backend/api/main.py` exposes FastAPI endpoints for arXiv URLs and PDF uploads.
+2. **Document ingestion** - `backend/tools/` loads papers, extracts text, detects sections, and handles equations.
+3. **RAG preparation** - `backend/rag/` chunks text, builds embeddings, and stores vectors for retrieval.
+4. **Retrieval layer** - `backend/retrieval/` provides BM25, reranking, and hybrid search utilities.
+5. **Agent orchestration** - `backend/agent/orchestrator.py` runs the section-wise analysis pipeline.
+6. **Analysis agents** - `backend/analysis/` generates the final report sections through a shared LLM client.
+
+### Request flow
+
+`PDF or arXiv URL -> text extraction -> chunking -> embeddings -> vector store -> retriever -> analysis agents -> structured response`
+
+## Recent Changes
+
+- Standardized the analysis LLM helper around Groq instead of Claude naming.
+- Updated all analysis agents to use the shared Groq client.
+- Kept the core analysis logic unchanged while aligning the model integration with the current backend setup.
+
 ## Project Structure
 
 - `backend/` FastAPI app and analysis pipeline
@@ -111,6 +132,12 @@ Both endpoints return:
   "research_gaps": "..."
 }
 ```
+
+### Output modes
+
+- Production mode is the default and returns only the generated research results.
+- Debug mode is enabled with `?debug=true` or by setting `DEBUG=true` / `APP_DEBUG=true` in the environment.
+- Debug mode includes internal retrieval and generation metadata for development only.
 
 ## Troubleshooting
 

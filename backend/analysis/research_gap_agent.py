@@ -1,26 +1,20 @@
-from analysis.llm_client import generate_with_claude
+from analysis.section_service import generate_evidence_based_section
 
 
 def generate_research_gaps(retriever):
-    context = retriever.retrieve_context(
-        "limitations drawback open problem future work challenge scalability assumption",
-        top_k=4
-    )
-
-    prompt = f"""
-You are an AI research assistant.
-
-Analyze the context from the research paper and identify potential research gaps.
+    return generate_evidence_based_section(
+        retriever,
+        section_name="research_gaps",
+        query_text="limitations drawback open problem future work conclusion future directions challenge scalability assumption unexplored area",
+        max_tokens=650,
+        prompt="""
+Analyze the paper and identify potential research gaps.
 
 Requirements:
 - Identify 3 research gaps
 - Each gap explanation should be about 5 to 6 lines
-- Focus on limitations, missing experiments, scalability issues, or unexplored areas
+- Focus on limitations, missing experiments, scalability issues, unexplored areas, and what the conclusion or future work suggests remains open
 - Avoid bullet points
-
-Context:
-{context}
-"""
-
-    return generate_with_claude(prompt, max_tokens=220)
+""".strip(),
+    )
 

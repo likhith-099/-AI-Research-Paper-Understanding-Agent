@@ -1,26 +1,20 @@
-from analysis.llm_client import generate_with_claude
+from analysis.section_service import generate_evidence_based_section
 
 
 def generate_limitations(retriever):
-    context = retriever.retrieve_context(
-        "limitations drawback challenge weakness assumption discussion",
-        top_k=4
-    )
-
-    prompt = f"""
-You are an AI research assistant.
-
-Using the context below, explain the limitations of the research paper.
+    return generate_evidence_based_section(
+        retriever,
+        section_name="limitations",
+        query_text="limitations drawback challenge weakness assumption discussion",
+        max_tokens=500,
+        prompt="""
+Explain the limitations of the research paper.
 
 Requirements:
 - Write 5 to 6 lines
 - Describe weaknesses or constraints of the approach
 - Mention assumptions or practical challenges
 - Avoid bullet points
-
-Context:
-{context}
-"""
-
-    return generate_with_claude(prompt, max_tokens=220)
+""".strip(),
+    )
 
