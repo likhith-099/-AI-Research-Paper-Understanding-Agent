@@ -10,12 +10,14 @@ from retrieval.inspection import build_retrieval_trace
 
 
 class Retriever:
+    _embedding_model = None
 
-    def __init__(self, vector_store, paper_text=None, equations=None, section_debug=None):
+    def __init__(self, vector_store, paper_text=None, equations=None, section_debug=None, paper_metadata=None):
         self.vector_store = vector_store
         self.paper_text = paper_text or ""
         self.paper_equations = equations or []
         self.section_debug = section_debug or {}
+        self.paper_metadata = paper_metadata or {}
         self.last_trace = None
         self.available_sections = sorted(
             {
@@ -25,13 +27,17 @@ class Retriever:
             }
         )
 
-        self.embedding_model = SentenceTransformer(
-            "all-MiniLM-L6-v2"
-        )
+        self.embedding_model = self._get_embedding_model()
 
         self.reranker = Reranker()
         self.bm25 = BM25Retriever(vector_store.chunks)
         self.hybrid = HybridSearch()
+
+    @classmethod
+    def _get_embedding_model(cls):
+        if cls._embedding_model is None:
+            cls._embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+        return cls._embedding_model
 
     def _retrieve_once(self, query, allowed_sections=None, equation_only=False, top_k=4):
         query_embedding = self.embedding_model.encode(query)

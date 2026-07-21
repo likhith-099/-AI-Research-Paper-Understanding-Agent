@@ -65,6 +65,7 @@ def build_retrieval_trace(
                 "chunk_id": chunk["child_id"],
                 "parent_id": chunk["parent_id"],
                 "section": chunk["section"],
+                "pages": chunk.get("pages", []),
                 "score_context": chunk.get("section_confidence", 0.0),
             }
             for chunk in selected_chunks

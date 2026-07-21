@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from analysis.llm_client import generate_with_groq
-from analysis.output_validation import validate_section_output, NO_EVIDENCE_MESSAGE
+from analysis.output_validation import (
+    validate_section_output,
+    NO_EVIDENCE_MESSAGE,
+    build_failure_fallback,
+)
 
 
 QUERY_EXPANSIONS = {
@@ -130,11 +134,17 @@ Context:
 
     generation_debug = None
     for _ in range(3):
-        generated, generation_debug = generate_with_groq(
-            full_prompt,
-            max_tokens=max_tokens,
-            return_metadata=True,
-        )
+        try:
+            generated, generation_debug = generate_with_groq(
+                full_prompt,
+                max_tokens=max_tokens,
+                return_metadata=True,
+            )
+        except RuntimeError as exc:
+            generation_debug = {
+                "error": str(exc),
+            }
+            continue
 
         if isinstance(generated, dict):
             continue
@@ -150,11 +160,12 @@ Context:
                 "generation_debug": generation_debug,
             }
 
+    fallback_answer = build_failure_fallback(section_name, retriever)
     return {
-        "answer": "Generation failed",
+        "answer": fallback_answer,
         "evidence_chunks": evidence_chunks,
         "source_sections": source_sections,
-        "status": "generation_failed",
+        "status": "ok_fallback" if fallback_answer != NO_EVIDENCE_MESSAGE else "insufficient_evidence",
         "retrieval_debug": retrieval_debug,
         "generation_debug": generation_debug,
     }

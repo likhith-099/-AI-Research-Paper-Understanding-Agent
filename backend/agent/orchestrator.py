@@ -66,8 +66,10 @@ def _build_debug_report(retriever, section_results):
             )
 
     document_debug = getattr(retriever, "section_debug", {}) or {}
+    paper_metadata = getattr(retriever, "paper_metadata", {}) or {}
 
     return {
+        "paper_info": paper_metadata,
         "detected_sections": document_debug.get("headings", []),
         "section_coverage": document_debug.get("coverage", 0.0),
         "missing_sections": document_debug.get("missing_sections", []),
@@ -97,10 +99,21 @@ def analyze_paper(retriever, include_debug: bool = False):
     # Preserve the complete analysis internally so debugging data remains available without polluting production output.
     debug_report = _build_debug_report(retriever, report)
     report["debug_report"] = debug_report
+    report["paper_info"] = debug_report.get("paper_info", {})
     setattr(retriever, "last_analysis_report", report)
     setattr(retriever, "last_debug_report", debug_report)
 
     if include_debug:
         return report
 
-    return _build_public_report(report)
+    public_report = _build_public_report(report)
+    public_report["paper_info"] = debug_report.get("paper_info", {})
+    public_report["debug_report"] = {
+        "paper_info": debug_report.get("paper_info", {}),
+        "detected_sections": debug_report.get("detected_sections", []),
+        "section_coverage": debug_report.get("section_coverage", 0.0),
+        "missing_sections": debug_report.get("missing_sections", []),
+        "unmatched_headings": debug_report.get("unmatched_headings", []),
+        "section_traces": debug_report.get("section_traces", {}),
+    }
+    return public_report

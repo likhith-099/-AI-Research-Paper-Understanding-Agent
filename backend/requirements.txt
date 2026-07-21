@@ -9,3 +9,4 @@ uvicorn
 python-dotenv
 anthropic
 python-multipart
+rank_bm25

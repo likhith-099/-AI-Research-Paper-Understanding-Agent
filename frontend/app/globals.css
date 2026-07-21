@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 13%;
+  --card-foreground: 210 40% 98%;
+  --border: 217 19% 27%;
+  --input: 217 19% 27%;
+  --primary: 263 70% 62%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 217 19% 20%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 215 28% 17%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 215 28% 17%;
+  --accent-foreground: 210 40% 98%;
+  --ring: 263 70% 62%;
+}
+
+html.light {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --card: 210 40% 98%;
+  --card-foreground: 222 47% 11%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222 47% 11%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background: radial-gradient(circle at top, rgba(124, 58, 237, 0.18), transparent 32%),
+    linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+  color: hsl(var(--foreground));
+}
+
+.glass {
+  backdrop-filter: blur(18px);
+  background: color-mix(in oklab, hsl(var(--card)) 85%, transparent);
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, #c4b5fd, #a78bfa, #60a5fa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

@@ -17,6 +17,10 @@ def _get_model():
     return _model
 
 
+def warm_embedding_model():
+    _get_model()
+
+
 def _prepare_text(chunk):
     """
     Embed child chunks only.

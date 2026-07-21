@@ -2,12 +2,16 @@ from sentence_transformers import CrossEncoder
 
 
 class Reranker:
+    _model = None
 
     def __init__(self):
+        self.model = self._get_model()
 
-        self.model = CrossEncoder(
-            "cross-encoder/ms-marco-MiniLM-L-6-v2"
-        )
+    @classmethod
+    def _get_model(cls):
+        if cls._model is None:
+            cls._model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+        return cls._model
 
     def rerank(
         self,
@@ -34,7 +38,6 @@ class Reranker:
         pairs = []
 
         for chunk in chunks:
-
             pairs.append(
                 [
                     query,
@@ -59,3 +62,7 @@ class Reranker:
             }
             for chunk, score in ranked[:top_k]
         ]
+
+
+def warm_reranker_model():
+    Reranker._get_model()

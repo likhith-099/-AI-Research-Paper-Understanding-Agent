@@ -84,6 +84,29 @@ Open Swagger UI:
 
 - `http://127.0.0.1:8000/docs`
 
+## Run Web App
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open the UI:
+
+- `http://127.0.0.1:3000`
+
+## Docker
+
+```powershell
+docker compose up --build
+```
+
+This starts:
+
+- FastAPI backend on `http://127.0.0.1:8000`
+- Next.js frontend on `http://127.0.0.1:3001`
+
 ## API Endpoints
 
 ### 1) Analyze by arXiv URL
