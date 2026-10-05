@@ -1,0 +1,49 @@
+name: Trigger auto deployment for rag-agent-backend
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/rag-agent-backend-AutoDeployTrigger-25d29c20-29bc-412c-90d0-be5664adb88f.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.RAGAGENTBACKEND_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.RAGAGENTBACKEND_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.RAGAGENTBACKEND_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          _dockerfilePathKey_: _dockerfilePath_
+          _targetLabelKey_: _targetLabel_
+          registryUrl: ragagent.azurecr.io
+          registryUsername: ${{ secrets.RAGAGENTBACKEND_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.RAGAGENTBACKEND_REGISTRY_PASSWORD }}
+          containerAppName: rag-agent-backend
+          resourceGroup: rag
+          imageToBuild: ragagent.azurecr.io/rag-agent-backend:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
