@@ -172,6 +172,9 @@ Both endpoints return:
   - set `GROQ_API_KEY` in `.env`
 - Upload errors for form-data:
   - ensure `python-multipart` is installed (already in `backend/requirements.txt`)
+- Azure frontend requests blocked despite backend `200 OK`:
+  - set the backend app setting `CORS_ORIGINS` to the exact frontend origin, including `https://` and without a trailing slash (for example, `https://your-frontend.azurewebsites.net`)
+  - separate multiple origins with commas, then restart the backend app
 
 ## Notes
 
