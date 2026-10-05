@@ -145,8 +145,12 @@ async def analyze_upload(
 
     temp_path = None
     try:
+        content = await file.read()
+        if not content:
+            raise HTTPException(status_code=400, detail="Uploaded PDF is empty.")
+
         with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-            temp_file.write(await file.read())
+            temp_file.write(content)
             temp_path = temp_file.name
 
         return await run_in_threadpool(_run_analysis, temp_path, debug=_is_debug_requested(debug))
